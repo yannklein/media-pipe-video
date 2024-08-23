@@ -92,8 +92,7 @@ const handleVideoClick = async () => {
     });
   }, 100);
 
-  document.querySelector('.start').removeEventListener('click', handleVideoClick);
-  document.querySelector('.start').addEventListener('click', async () =>  {
+  document.querySelector('.stop').addEventListener('click', async () =>  {
     document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
     clearInterval(interval)
   });
