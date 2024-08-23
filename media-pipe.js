@@ -26,7 +26,7 @@ const videoContainer = document.querySelector('.detectVideoOnClick');
 const video = document.querySelector('.detectVideoOnClick video');
 const stopButton = document.querySelector('.stop');
 const startButton = document.querySelector('.start');
-const detectionInterval = 0.01;
+const detectionInterval = 0.05;
 
 // Before we can use PoseLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
@@ -99,7 +99,9 @@ const handleStart = async () => {
     console.log('Wait for poseLandmarker to load before clicking!');
     return;
   }
-  const interval = setInterval(renderDetectedPoses, 100);
+
+  renderDetectedPoses();
+  const interval = setInterval(renderDetectedPoses, detectionInterval);
 
   stopButton.addEventListener('click', async () => {
     document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
