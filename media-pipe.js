@@ -26,6 +26,7 @@ const videoContainer = document.querySelector('.detectVideoOnClick');
 const video = document.querySelector('.detectVideoOnClick video');
 const stopButton = document.querySelector('.stop');
 const startButton = document.querySelector('.start');
+const canvas = document.querySelector('.canvas');
 const detectionInterval = 0.05;
 
 // Before we can use PoseLandmarker class we must wait for it to finish
@@ -59,12 +60,8 @@ const renderDetectedPoses = async () => {
     return;
   }
 
-  document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
-  const canvas = document.createElement('canvas');
-  canvas.setAttribute('class', 'canvas');
   canvas.setAttribute('width', videoContainer.clientWidth + 'px');
   canvas.setAttribute('height', videoContainer.clientHeight + 'px');
-  videoContainer.appendChild(canvas);
   const canvasCtx = canvas.getContext('2d');
   const drawingUtils = new DrawingUtils(canvasCtx);
 
