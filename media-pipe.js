@@ -20,7 +20,13 @@ import {
 
 let poseLandmarker = undefined;
 let runningMode = 'IMAGE';
+let lastTime = -1;
 
+const videoContainer = document.querySelector('.detectVideoOnClick');
+const video = document.querySelector('.detectVideoOnClick video');
+const stopButton = document.querySelector('.stop');
+const startButton = document.querySelector('.start');
+const detectionInterval = 0.01;
 
 // Before we can use PoseLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
@@ -40,63 +46,67 @@ const createPoseLandmarker = async () => {
 };
 
 /**
+ * Renders detected poses from a video stream onto a canvas element.
+ *
+ * This function creates a new canvas element, sets up the drawing context,
+ * and uses the PoseLandmarker API to detect poses in the video stream.
+ * The detected poses are then drawn onto the canvas using the DrawingUtils class.
+ *
+ * @return {Promise<void>} A promise that resolves when the pose detection is complete.
+ */
+const renderDetectedPoses = async () => {
+  if (Math.abs(video.currentTime - lastTime) < detectionInterval) {
+    return;
+  }
+
+  document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('class', 'canvas');
+  canvas.setAttribute('width', videoContainer.clientWidth + 'px');
+  canvas.setAttribute('height', videoContainer.clientHeight + 'px');
+  videoContainer.appendChild(canvas);
+  const canvasCtx = canvas.getContext('2d');
+  const drawingUtils = new DrawingUtils(canvasCtx);
+
+  // Now let's start detecting the stream.
+  if (runningMode === 'IMAGE') {
+    runningMode = 'VIDEO';
+    await poseLandmarker.setOptions({ runningMode: 'VIDEO' });
+  }
+  let startTimeMs = performance.now();
+
+  poseLandmarker.detectForVideo(video, startTimeMs, (result) => {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const landmark of result.landmarks) {
+      drawingUtils.drawLandmarks(landmark, {
+        radius: (data) => DrawingUtils.lerp(data.from.z, -0.15, 0.1, 5, 1),
+      });
+      drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+    }
+    canvasCtx.restore();
+  });
+  lastTime = video.currentTime;
+};
+
+/**
  * Handles a video click event by setting up a pose landmarker and detecting video streams.
  *
  * @return {Promise<void>} A promise that resolves when the video click event has been handled.
  */
-const handleVideoClick = async () => {
-  const videoContainer = document.querySelector('.detectVideoOnClick');
-  const video = document.querySelector('.detectVideoOnClick video');
+const handleStart = async () => {
   if (!poseLandmarker) {
     console.log('Wait for poseLandmarker to load before clicking!');
     return;
   }
+  const interval = setInterval(renderDetectedPoses, 100);
 
-  const interval = setInterval(async () => {
+  stopButton.addEventListener('click', async () => {
     document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
-    const canvas = document.createElement('canvas');
-    canvas.setAttribute('class', 'canvas');
-    canvas.setAttribute('width', videoContainer.clientWidth + 'px');
-    canvas.setAttribute('height', videoContainer.clientHeight + 'px');
-    canvas.style =
-      'left: 0px;' +
-      'top: 0px;' +
-      'width: ' +
-      videoContainer.clientWidth +
-      'px;' +
-      'height: ' +
-      videoContainer.clientHeight +
-      'px;';
-
-    videoContainer.appendChild(canvas);
-    const canvasCtx = canvas.getContext('2d');
-    const drawingUtils = new DrawingUtils(canvasCtx);
-
-    // Now let's start detecting the stream.
-    if (runningMode === 'IMAGE') {
-      runningMode = 'VIDEO';
-      await poseLandmarker.setOptions({ runningMode: 'VIDEO' });
-    }
-    let startTimeMs = performance.now();
-
-    poseLandmarker.detectForVideo(video, startTimeMs, (result) => {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const landmark of result.landmarks) {
-        drawingUtils.drawLandmarks(landmark, {
-          radius: (data) => DrawingUtils.lerp(data.from.z, -0.15, 0.1, 5, 1),
-        });
-        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
-      }
-      canvasCtx.restore();
-    });
-  }, 100);
-
-  document.querySelector('.stop').addEventListener('click', async () =>  {
-    document.querySelectorAll('.canvas').forEach((canva) => canva.remove());
-    clearInterval(interval)
+    clearInterval(interval);
+    lastTime = -1;
   });
-}
+};
 
 /**
  * Initializes the pose detection functionality by creating a pose landmarker and setting up an event listener for the start button.
@@ -105,7 +115,7 @@ const handleVideoClick = async () => {
  */
 const runDetection = () => {
   createPoseLandmarker();
-  document.querySelector('.start').addEventListener('click', handleVideoClick);
-}
+  startButton.addEventListener('click', handleStart);
+};
 
 runDetection();
